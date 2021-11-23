@@ -5,7 +5,7 @@ resource "aws_cloudformation_stack" "cf" {
     OutputBucketName = "${var.stack}-${var.environment}-${var.application}-code-stg"
 
   }
-  template_body = file("./cloudformationtemplate/ssh.yml")
+  template_body = file("${path.module}/cloudformationtemplate/ssh.yml")
   capabilities  = ["CAPABILITY_NAMED_IAM","CAPABILITY_IAM"]
 
 }
