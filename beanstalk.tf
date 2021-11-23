@@ -8,10 +8,11 @@ locals {
 }
 
 
-data "aws_elastic_beanstalk_solution_stack" "php" {
-  most_recent = true
-  name_regex = "^64bit Amazon Linux 2 (.*) running PHP 7.4(.*)$"
-}
+# data "aws_elastic_beanstalk_solution_stack" "php" {
+#   most_recent = true
+#   name_regex = "^64bit Amazon Linux 2 (.*) running PHP 7.4(.*)$"
+# }
+
 
 resource "aws_elastic_beanstalk_application" "app" {
   name        = "${var.stack}-${var.environment}-${var.application}"
@@ -26,8 +27,8 @@ resource "aws_elastic_beanstalk_application" "app" {
 resource "aws_elastic_beanstalk_environment" "environment" {
   name                = "${var.stack}-${var.environment}-${var.application}-env"
   application         = aws_elastic_beanstalk_application.app.name
-  solution_stack_name  = data.aws_elastic_beanstalk_solution_stack.php.name
-
+  #solution_stack_name  = data.aws_elastic_beanstalk_solution_stack.php.name
+  solution_stack_name  = "PHP 7.4 running on 64bit Amazon Linux 2/3.3.8"
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
