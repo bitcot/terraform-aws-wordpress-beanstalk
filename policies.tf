@@ -106,7 +106,7 @@ target_key_id = aws_kms_key.kms-key.key_id
 # EC2 instance profile role and policy
 
 data "template_file" "instance-profile-policy" {
-template = file("instance-profile-policy.json.tpl")
+template = file("${path.module}/instance-profile-policy.json.tpl")
 
 vars = {
 kms_key_id  = aws_kms_key.kms-key.arn
@@ -161,7 +161,7 @@ policy_arn = aws_iam_policy.instance_profile.arn
 # CodeBuild role and policy
 
 data "template_file" "codebuild-policy" {
-template = file("codebuild-policy.json.tpl")
+template = file("${path.module}/codebuild-policy.json.tpl")
 
 vars = {
 kms_key_id  = aws_kms_key.kms-key.arn
@@ -305,7 +305,7 @@ create = "60m"
 #  CodePipeline role and policy
 
 data "template_file" "codepipeline-policy" {
-template = file("codepipeline-policy.json.tpl")
+template = file("${path.module}/codepipeline-policy.json.tpl")
 
 vars = {
 account_id  = data.aws_caller_identity.current.account_id
