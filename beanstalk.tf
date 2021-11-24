@@ -145,12 +145,12 @@ setting {
   "Environment": {
     "ELB": {
       "ELBRequests4xx": {
-        "Enabled": true
+        "Enabled": false
       }
     },
     "Application": {
       "ApplicationRequests4xx": {
-        "Enabled": true
+        "Enabled": false
       }
     }
   }
