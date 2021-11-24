@@ -48,6 +48,7 @@ variable "sslpolicy" {
 }
 
 
+
 variable "healthcheckpath" {
   description = "Load Balancer healthcheck path"
   type        = string
@@ -64,6 +65,16 @@ variable "autoscaling_instance_type" {
   description = "EB autoscaling launch config instance type"
   type        = string
   # default     = "t2.micro"
+}
+variable "root_volume_size" {
+  description = "Size of root volume of autoscaling launch config instance"
+  type        = string
+  default     = 30 
+}
+variable "root_volume_type" {
+  description = "Type of root volume of autoscaling lauch config instance"
+  type        = string
+  default     = "gp2"
 }
 
 variable "enhanced_reporting_enabled" {
@@ -171,6 +182,21 @@ variable "autoscaling_maxsize" {
 variable "build_timeout" {
   description = "CodeBuild build timeout in minutes"
   default     = "10"
+}
+variable "document_root" {
+  description = "document root for php software"
+  default     = "/"
+  type        = string
+}
+variable "memory_limit" {
+  description = "memory limit for php software"
+  default     = "512M"
+  type        = string
+}
+variable "max_execution_time" {
+  description = "maximum execution time"
+  default     = 600
+  type        = string
 }
 
 # s3 and cdn
@@ -391,8 +417,7 @@ variable "dbname" {
 }
 
 variable "enable_deletion_protection" {
-  default     = false
-  description = "If `true`, deletion protection will be turned on for the RDS instance(s)"
+  description = "If `true`, deletion protection will be turned on for the RDS instance(s),true/false"
   type        = bool
 }
 
@@ -505,8 +530,7 @@ variable "db_storage" {
 }
 
 variable "storage_encrypted" {
-  default     = false
-  description = "Encrypt DB storage"
+  description = "Encrypt DB storage true/false"
   type        = bool
 }
 variable "kms_key_id" {
@@ -536,4 +560,14 @@ variable "storage_type" {
 # variable "enable_rds" {
 #   type = bool
 # }
+
+
+# ################################
+# # SNS
+# ################################
+
+variable "sns_email_id" {
+  type = string
+  description = "email id for sns alert"
+}
 

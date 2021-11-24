@@ -17,6 +17,11 @@ locals {
 resource "aws_elastic_beanstalk_application" "app" {
   name        = "${var.stack}-${var.environment}-${var.application}"
   description = "${var.stack}-${var.environment}-${var.application}-application"
+  appversion_lifecycle {
+    service_role          = aws_iam_role.beanstalk.arn
+    max_count             = 20
+    delete_source_from_s3 = true
+  }
 
   tags = {
     "stack"     = var.stack
@@ -133,6 +138,28 @@ value = jsonencode({
     resource = ""
   }
 setting {
+  namespace = "aws:elasticbeanstalk:healthreporting:system"
+  name      = "ConfigDocument"
+  value = jsonencode({
+"Rules": {
+  "Environment": {
+    "ELB": {
+      "ELBRequests4xx": {
+        "Enabled": false
+      }
+    },
+    "Application": {
+      "ApplicationRequests4xx": {
+        "Enabled": false
+      }
+    }
+  }
+},
+"Version": 1
+})
+resource = ""
+}
+setting {
 namespace = "aws:elasticbeanstalk:cloudwatch:logs"
 name      = "StreamLogs"
 value     = "true"
@@ -206,6 +233,18 @@ setting {
 namespace = "aws:autoscaling:launchconfiguration"
 name      = "IamInstanceProfile"
 value     = aws_iam_instance_profile.instance_profile.name
+}
+setting {
+  namespace = "aws:autoscaling:launchconfiguration"
+  name      = "RootVolumeSize"
+  value     = var.root_volume_size
+  resource  = ""
+}
+setting {
+  namespace = "aws:autoscaling:launchconfiguration"
+  name      = "RootVolumeType"
+  value     = var.root_volume_type
+  resource  = ""
 }
 
 
@@ -389,6 +428,22 @@ setting {
 namespace = "aws:elasticbeanstalk:environment:proxy"
 name      = "ProxyServer"
 value     = "apache"
+}
+
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "document_root"
+value     = var.document_root
+}
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "memory_limit"
+value     = var.memory_limit
+}
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "max_execution_time"
+value     = var.max_execution_time
 }
 // Will enable it once approved by security
 //  lifecycle {

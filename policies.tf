@@ -419,3 +419,92 @@ status_code = "HTTP_301"
 data "aws_lb" "eb_lb" {
 arn = aws_elastic_beanstalk_environment.environment.load_balancers[0]
 }
+
+
+### BEGIN SNS notification
+
+data "aws_iam_policy_document" "notification" {
+statement {
+actions = ["sns:Publish"]
+
+principals {
+type        = "Service"
+identifiers = ["codestar-notifications.amazonaws.com"]
+}
+
+resources = [aws_sns_topic.topic.arn]
+}
+}
+
+resource "aws_sns_topic_policy" "notification" {
+arn    = aws_sns_topic.topic.arn
+policy = data.aws_iam_policy_document.notification.json
+}
+
+resource "aws_sns_topic" "topic" {
+name              = "${var.stack}-${var.environment}-${var.application}-topic"
+display_name      = "${var.stack}-${var.environment}-${var.application}-topic"
+kms_master_key_id = aws_kms_key.kms-key.arn
+
+#provisioner "local-exec" {
+#  command = "aws --profile=${var.profile} sns subscribe --region=${var.region_primary} --topic-arn ${self.arn} --protocol email --notification-endpoint ${var.email}"
+#}
+}
+
+resource "aws_sns_topic_subscription" "user_updates_email_target" {
+  topic_arn = aws_sns_topic.topic.arn
+  protocol  = "email"
+  endpoint  = var.sns_email_id
+}
+
+resource "aws_codestarnotifications_notification_rule" "pipeline" {
+detail_type = "BASIC"
+event_type_ids = [
+"codepipeline-pipeline-action-execution-failed",
+"codepipeline-pipeline-action-execution-canceled",
+"codepipeline-pipeline-stage-execution-canceled",
+"codepipeline-pipeline-stage-execution-failed",
+"codepipeline-pipeline-pipeline-execution-failed",
+"codepipeline-pipeline-pipeline-execution-canceled",
+"codepipeline-pipeline-pipeline-execution-superseded",
+"codepipeline-pipeline-manual-approval-failed",
+"codepipeline-pipeline-manual-approval-needed"
+### added all for now we can uncomment if needed
+//    "codepipeline-pipeline-manual-approval-succeeded"
+//    "codepipeline-pipeline-action-execution-succeeded"
+//    "codepipeline-pipeline-action-execution-started",
+//    "codepipeline-pipeline-stage-execution-started",
+//    "codepipeline-pipeline-stage-execution-succeeded",
+//    "codepipeline-pipeline-stage-execution-resumed",
+//    "codepipeline-pipeline-pipeline-execution-started",
+//    "codepipeline-pipeline-pipeline-execution-resumed",
+//    "codepipeline-pipeline-pipeline-execution-succeeded",
+]
+
+name     = "${var.stack}-${var.environment}-${var.application}-pipeline-notification"
+resource = aws_codepipeline.codepipeline.arn
+
+target {
+address = aws_sns_topic.topic.arn
+}
+}
+
+resource "aws_codestarnotifications_notification_rule" "build" {
+detail_type = "BASIC"
+event_type_ids = [
+"codebuild-project-build-state-failed",
+"codebuild-project-build-phase-failure",
+"codebuild-project-build-state-stopped"
+//    "codebuild-project-build-state-succeeded",
+//    "codebuild-project-build-phase-success"
+]
+
+name     = "${var.stack}-${var.environment}-${var.application}-build-notification"
+resource = aws_codebuild_project.build.arn
+
+target {
+address = aws_sns_topic.topic.arn
+}
+}
+
+### END SNS notification
