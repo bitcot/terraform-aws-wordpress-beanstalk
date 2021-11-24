@@ -223,6 +223,11 @@ variable "domain_name_cloudfront" {
   default     = ""
   type        = string
 }
+variable "domain_name_cloudfront_certs" {
+  description = "Domain name for cloudfront ssl "
+  default     = ""
+  type        = string
+}
 
 
 variable "minimum_client_tls_protocol_version" {

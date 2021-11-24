@@ -281,7 +281,7 @@ create = "60m"
 # BEGIN ACM certificate for Cloudfront
 
 resource "aws_acm_certificate" "cert_cloudfront" {
-domain_name       = var.domain_name_cloudfront
+domain_name       = var.domain_name_cloudfront_certs
 validation_method = "DNS"
 provider = aws.for_acm
 tags = {
