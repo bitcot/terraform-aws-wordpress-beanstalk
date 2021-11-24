@@ -24,13 +24,17 @@
           * environment                  - Environment name
           * application                  - Name of application 
           * domain_name                  - Domain name for the ELB
-          * domain_name_cloudfront       - Domain name for the Cloudfront
           * codeprefix                   - S3 object key codeprefix where the code is stored in S3 bucket.
           * dbname                       - Name for the RDS database
           * dbadminuser                  - Username for the database
           * db_instance_class            - Instance type for RDS
           * engine_version               - DB engine version
           * autoscaling_instance_type    - Instance type for the instance of Beanstalk application 
+          * domain_name_cloudfront_certs - Domain name for the Cloudfront
+          * domain_name_cloudfront       - Aliase name for the Cloudfront domain
+          * sns_email_id                 - email id for sns alert
+          * enable_deletion_protection   - true/false for the deletion protection of RDS
+          * storage_encrypted            - true/false for the encryption of RDS EBS volume
 ​
     4. After including the variables, enter
             

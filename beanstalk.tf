@@ -145,12 +145,12 @@ setting {
   "Environment": {
     "ELB": {
       "ELBRequests4xx": {
-        "Enabled": false
+        "Enabled": true
       }
     },
     "Application": {
       "ApplicationRequests4xx": {
-        "Enabled": false
+        "Enabled": true
       }
     }
   }
@@ -159,6 +159,7 @@ setting {
 })
 resource = ""
 }
+
 setting {
 namespace = "aws:elasticbeanstalk:cloudwatch:logs"
 name      = "StreamLogs"
