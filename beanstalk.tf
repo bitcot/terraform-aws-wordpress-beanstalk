@@ -133,15 +133,7 @@ value = jsonencode({
           "LoadAverage1min" : 60
         }
       },
-      "Version" : 1
-    })
-    resource = ""
-  }
-setting {
-  namespace = "aws:elasticbeanstalk:healthreporting:system"
-  name      = "ConfigDocument"
-  value = jsonencode({
-"Rules": {
+      "Rules": {
   "Environment": {
     "ELB": {
       "ELBRequests4xx": {
@@ -155,11 +147,10 @@ setting {
     }
   }
 },
-"Version": 1
-})
-resource = ""
-}
-
+      "Version" : 1
+    })
+    resource = ""
+  }
 setting {
 namespace = "aws:elasticbeanstalk:cloudwatch:logs"
 name      = "StreamLogs"
