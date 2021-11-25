@@ -103,7 +103,7 @@ value     = "30"
 setting {
 namespace = "aws:elb:policies"
 name      = "ConnectionSettingIdleTimeout"
-value     = "60"
+value     = "180"
 }
 
 setting {
