@@ -120,7 +120,7 @@ module "password" {
   source  = "rhythmictech/secretsmanager-random-secret/aws"
   version = "~>1.2.0"
 
-  name = "/${var.stack}/${var.environment}/${var.application}/RDS_PASSWORD"
+  name = "/${var.stack}/${var.environment}/${var.application}/RDSPASSWORD"
   description = "${var.name} database password (username ${var.dbadminuser})"
 
   create_secret    = local.create_password_secret
