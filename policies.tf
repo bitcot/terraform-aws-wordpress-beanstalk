@@ -251,57 +251,6 @@ days = 90
 
 
 }
-
-
-# BEGIN ACM ertificate
-
-resource "aws_acm_certificate" "certificate" {
-domain_name       = var.domain_name
-validation_method = "DNS"
-
-tags = {
-"stack"     = "${var.stack}"
-"stack_env" = "${var.environment}"
-}
-
-lifecycle {
-create_before_destroy = true
-}
-}
-
-resource "aws_acm_certificate_validation" "certificate" {
-certificate_arn = aws_acm_certificate.certificate.arn
-timeouts {
-create = "60m"
-}
-}
-
-# END Certificate
-
-# BEGIN ACM certificate for Cloudfront
-
-resource "aws_acm_certificate" "cert_cloudfront" {
-domain_name       = var.domain_name_cloudfront
-validation_method = "DNS"
-provider = aws.for_acm
-tags = {
-"stack"     = "${var.stack}"
-"stack_env" = "${var.environment}"
-}
-
-lifecycle {
-create_before_destroy = true
-}
-}
-
-resource "aws_acm_certificate_validation" "cert_cloudfront" {
-certificate_arn = aws_acm_certificate.cert_cloudfront.arn
-provider = aws.for_acm
-timeouts {
-create = "60m"
-}
-}
-
 #  CodePipeline role and policy
 
 data "template_file" "codepipeline-policy" {

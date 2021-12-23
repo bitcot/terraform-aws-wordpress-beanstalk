@@ -1,7 +1,3 @@
-# locals {
-#   cert_cloudfront_arn = aws_acm_certificate_validation.cert_cloudfront[count.index].certificate_arn == null ? null : aws_acm_certificate_validation.cert_cloudfront[count.index].certificate_arn
-# }
-
 resource "aws_s3_bucket" "bucket" {
   bucket = "${var.stack}-${var.environment}-${var.application}-bucket-media"
   tags = {
@@ -71,16 +67,11 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.cert_cloudfront.certificate_arn
-    # cloudfront_default_certificate = acm_certificate_arn == null ? true : false
+    acm_certificate_arn      = var.cloudfront_cert_arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = var.minimum_client_tls_protocol_version
   }
   aliases = [var.domain_name_cloudfront]
-
-  # viewer_certificate {
-  #   cloudfront_default_certificate = true
-  # }
 
   tags = {
     Environment = "${var.stack}-${var.environment}-${var.application}"

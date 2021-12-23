@@ -17,11 +17,6 @@ variable "region_primary" {
   type    = string
 }
 
-variable "region_cloudfront" {
-  type    = string
-  default = "us-east-1"
-}
-
 #Stack Tags
 variable "stack" {
   type        = string
@@ -33,6 +28,10 @@ variable "environment" {
   type        = string
   description = "App environment"
   default     = ""
+}
+variable "ELB_certificate_arn" {
+  type = string
+  description = "Enter ELB_certificate_arn"
 }
 
 variable "application" {
@@ -174,31 +173,17 @@ variable "build_timeout" {
 }
 
 # s3 and cdn
-# variable "Bucketname" {
-#   type = string
-#     # default = "marianastg-mediabucket"
-# }
-
-variable "domain_name" {
-  description = "Domain name of the website"
-  default     = ""
-  type        = string
-}
-
-
-variable "domain_current_site" {
-  description = "Domain name of the website via alb"
-  default     = ""
-  type        = string
-}
-
 variable "domain_name_cloudfront" {
   description = "Domain name for cloudfront "
   default     = ""
   type        = string
 }
+variable "cloudfront_cert_arn" {
+  description = "Enter certs arn  for cloudfront"
+  default     = ""
+  type        = string
 
-
+}
 variable "minimum_client_tls_protocol_version" {
   type        = string
   description = "CloudFront viewer certificate minimum protocol version"
@@ -257,14 +242,14 @@ variable "cloudwatch_log_retention" {
 
 variable "codeprefix" {
   type = string
+  description  = "we need to pass code prefix as this format Ex: username/reponame/branchname/username_reponame.zip"
   default = ""
+
 }
 variable "poll-source-changes" {
   default     = "true"
   description = "Set whether the created pipeline should poll the source for change and triggers the pipeline"
 }
-
-
 
 
 # RDS variables
@@ -276,6 +261,10 @@ variable "iops" {
   type        = number
   description = "The amount of provisioned IOPS. Setting this implies a storage_type of 'io1'. Default is 0 if rds storage type is not 'io1'"
   default     = 0
+}
+variable "aws_db_parameter_group_family" {
+  type = string
+  description = "aws_db_parameter_group_family version we need to pass here for ex: mysql5.7, mysql8.0"
 }
 
 
@@ -397,7 +386,7 @@ variable "enable_deletion_protection" {
 }
 
 variable "engine_version" {
-  description = "Version of database engine to use"
+  description = "Version of database engine to use ex: 5.5.6, 8.0"
   type        = string
 }
 

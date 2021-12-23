@@ -23,13 +23,12 @@ resource "aws_codepipeline" "codepipeline" {
       version          = "1"
       output_artifacts = ["SourceArtifact"]
       configuration = {
-        S3Bucket = "${var.stack}-${var.environment}-${var.application}-code-stg"
+        S3Bucket = "${var.stack}-${var.environment}-${var.application}-code"
         S3ObjectKey = "${var.codeprefix}"  # username/reponame/branchname/username_reponame.zip
         PollForSourceChanges = "${var.poll-source-changes}"
       }
     }
-
-    }
+  }
 
   stage {
     name = "Build"

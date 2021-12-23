@@ -25,7 +25,6 @@ resource "aws_codebuild_project" "build" {
       name  = "stack"
       value = var.stack
     }
-
     environment_variable {
       name  = "environment"
       value = var.environment
@@ -52,6 +51,4 @@ resource "aws_codebuild_project" "build" {
     subnets            = local.subnets
     security_group_ids = [module.security-group-codebuild.security_group_id]
   }
-
-
 }

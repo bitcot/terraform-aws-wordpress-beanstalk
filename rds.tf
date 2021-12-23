@@ -7,24 +7,24 @@ locals {
   sg_name_prefix            = "${var.name}-access"
   ssm_path                  = coalesce(var.ssm_path, "/db/${var.name}/${var.dbadminuser}-password")
 
-  db_tags = merge(
-    var.tags,
-    {
-      "Name" = "${var.name}-mysql"
-    },
-  )
+  # db_tags = merge(
+  #   var.tags,
+  #   {
+  #     "Name" = "${var.name}-mysql"
+  #   },
+  # )
 
-  sg_tags = merge(
-    var.tags,
-    map(
-      "Name", "${var.name}-access"
-    )
-  )
+  # sg_tags = merge(
+  #   var.tags,
+  #   map(
+  #     "Name", "${var.name}-access"
+  #   )
+  # )
 }
 
 resource "aws_db_parameter_group" "default" {
   name   = "rds-pg"
-  family = "mysql5.6"
+  family = var.aws_db_parameter_group_family
 }
 # resource "aws_db_parameter_group" "default7" {
 #   name   = "rds-pg-new"
@@ -54,7 +54,7 @@ resource "aws_iam_role" "this" {
 }
 
 resource "aws_db_subnet_group" "aws_subnet_group" {
-    name       = "main"
+    name       = "${var.stack}-${var.environment}"
     subnet_ids = local.subnets
 }
 
@@ -89,7 +89,7 @@ resource "aws_db_instance" "this" {
   apply_immediately                   = true
   tags = {
    "Name" = "${var.stack}-${var.environment}-${var.application}"
-   "Env"   = "${var.environment}-${var.application}"
+   "Env"   = "${var.environment}"
 }
 }
 
