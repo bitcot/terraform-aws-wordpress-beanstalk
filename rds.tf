@@ -54,7 +54,7 @@ resource "aws_iam_role" "this" {
 }
 
 resource "aws_db_subnet_group" "aws_subnet_group" {
-    name       = "${var.stack}-${var.environment}"
+    name       = "${var.stack}"
     subnet_ids = local.subnets
 }
 

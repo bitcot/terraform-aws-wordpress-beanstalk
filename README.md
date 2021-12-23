@@ -31,7 +31,7 @@
             autoscaling_instance_type    = "<Instance type for the instance of Beanstalk application Ex: T2.medium>" 
             domain_name_cloudfront       = "<Aliase name for the Cloudfront domain>"
             cloudfront_cert_arn          = "<Enter cloudfront_cert_arn>"
-            sns_email_id                 = "<Email id for sns alert>"
+            aws_db_parameter_group_family = "<aws_db_parameter_group_family version we need to pass here for ex: mysql5.7, mysql8.0>"
         }
         
     3. Insert the required variables values as shown above into this script.
