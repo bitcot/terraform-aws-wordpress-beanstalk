@@ -7,34 +7,12 @@ locals {
   sg_name_prefix            = "${var.name}-access"
   ssm_path                  = coalesce(var.ssm_path, "/db/${var.name}/${var.dbadminuser}-password")
 
-  # db_tags = merge(
-  #   var.tags,
-  #   {
-  #     "Name" = "${var.name}-mysql"
-  #   },
-  # )
-
-  # sg_tags = merge(
-  #   var.tags,
-  #   map(
-  #     "Name", "${var.name}-access"
-  #   )
-  # )
 }
 
 resource "aws_db_parameter_group" "default" {
-  name   = "rds-pg"
+  name   = "rds-db-pg"
   family = var.aws_db_parameter_group_family
 }
-# resource "aws_db_parameter_group" "default7" {
-#   name   = "rds-pg-new"
-#   family = "mysql5.7"
-# }
-# resource "aws_db_parameter_group" "default8" {
-#   name   = "rds-pg-new-eight"
-#   family = "mysql8.0"
-# }
-
 
 data "aws_iam_policy_document" "this" {
   statement {
@@ -55,11 +33,11 @@ resource "aws_iam_role" "this" {
 
 resource "aws_db_subnet_group" "aws_subnet_group" {
     name       = "${var.stack}"
-    subnet_ids = local.subnets
+    subnet_ids = local.pri_subnet_ids
 }
 
 resource "aws_db_instance" "this" {
-  identifier                          = "${var.stack}-${var.environment}-${var.application}"
+  identifier                          = "${var.stack}db"
   allocated_storage                   = var.db_storage
   backup_retention_period             = var.backup_retention_period
   copy_tags_to_snapshot               = true
@@ -75,7 +53,7 @@ resource "aws_db_instance" "this" {
   monitoring_interval                 = var.monitoring_interval
   monitoring_role_arn                 = local.monitoring_role_arn
   multi_az                            = var.multi_az
-  name                                = var.dbname
+  name                                = "${var.stack}db"
   kms_key_id                          = var.kms_key_id
   parameter_group_name                = aws_db_parameter_group.default.id
   password                            = local.password
@@ -88,9 +66,8 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids              = [aws_security_group.rds-sg.id]
   apply_immediately                   = true
   tags = {
-   "Name" = "${var.stack}-${var.environment}-${var.application}"
-   "Env"   = "${var.environment}"
-}
+   "Name" = "${var.stack}-db"
+  }
 }
 
 resource "aws_security_group" "rds-sg" {
@@ -99,7 +76,7 @@ resource "aws_security_group" "rds-sg" {
     from_port = 3306
     to_port   = 3306
     protocol  = "tcp"
-    security_groups = [module.security-group-webserver.security_group_id]
+    security_groups = [aws_security_group.web_server_sg.id]
   }
   egress {
     from_port   = 0
@@ -107,12 +84,11 @@ resource "aws_security_group" "rds-sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  name = "${var.stack}-${var.environment}-${var.application}-rds-sg"
-  description = "${var.stack}-${var.environment}-${var.application}-rds-sg"
+  name = "${var.stack}-rds-sg"
+  description = "${var.stack}-rds-sg"
   tags = {
    "stack"     = var.stack
-   "stack_env" = "${var.environment}-${var.application}-rds-sg"
-} 
+  } 
 }
 
 
@@ -120,7 +96,7 @@ module "password" {
   source  = "rhythmictech/secretsmanager-random-secret/aws"
   version = "~>1.2.0"
 
-  name = "/${var.stack}/${var.environment}/${var.application}/RDS_PASSWORD"
+  name = "/${var.stack}/rds_password"
   description = "${var.name} database password (username ${var.dbadminuser})"
 
   create_secret    = local.create_password_secret
@@ -160,30 +136,30 @@ resource "aws_ssm_parameter" "password" {
 }
 
 resource "aws_ssm_parameter" "dbadminuser" {
-name        = "/${var.stack}/${var.environment}/${var.application}/dbadminuser"
-description = "${var.stack} ${var.environment} ${var.application} dbadminuser"
+name        = "/${var.stack}/dbadminuser"
+description = "${var.stack} dbadminuser"
 type        = "String"
 value       = var.dbadminuser
 } 
 
 resource "aws_ssm_parameter" "dbname" {
-name        = "/${var.stack}/${var.environment}/${var.application}/dbname"
-description = "${var.stack} ${var.environment} ${var.application} dbname"
+name        = "/${var.stack}/dbname"
+description = "${var.stack} dbname"
 type        = "String"
-value       = var.dbname
+value       = "${var.stack}-db"
 } 
 
 resource "aws_ssm_parameter" "dbhostname" {
-name        = "/${var.stack}/${var.environment}/${var.application}/dbhostname"
-description = "${var.stack} ${var.environment} ${var.application} dbhostname"
+name        = "/${var.stack}/dbhostname"
+description = "${var.stack} dbhostname"
 type        = "String"
 value       = aws_db_instance.this.address
 depends_on  = [aws_db_instance.this] 
 } 
 
 resource "aws_ssm_parameter" "dbport" {
-name        = "/${var.stack}/${var.environment}/${var.application}/dbport"
-description = "${var.stack} ${var.environment} ${var.application} dbport"
+name        = "/${var.stack}/dbport"
+description = "${var.stack} dbport"
 type        = "String"
 value       = var.dbport
 } 

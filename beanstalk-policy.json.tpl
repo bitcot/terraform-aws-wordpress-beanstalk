@@ -7,7 +7,7 @@
             "Action": [
                 "sns:Publish"
             ],
-            "Resource": "arn:aws:sns:${region}:${account_id}:${stack}-${environment}-${application}-*"
+            "Resource": "arn:aws:sns:${region}:${account_id}:${stack}-*"
         }
     ]
 }

@@ -7,14 +7,12 @@ vars = {
   account_id  = data.aws_caller_identity.current.account_id
   region      = var.region_primary
   stack       = var.stack
-  environment = var.environment
-  application = var.application
 }
 }
 
 resource "aws_iam_policy" "beanstalk" {
-name        = "${var.stack}-${var.environment}-${var.application}-beanstalk-policy"
-description = "${var.stack}-${var.environment}-${var.application}-beanstalk-policy"
+name        = "${var.stack}-beanstalk-policy"
+description = "${var.stack}-beanstalk-policy"
 policy      = data.template_file.beanstalk-policy.rendered
 }
 
@@ -34,12 +32,12 @@ effect = "Allow"
 }
 
 resource "aws_iam_role" "beanstalk" {
-name        = "${var.stack}-${var.environment}-${var.application}-beanstalk"
-description = "${var.stack}-${var.environment}-${var.application}-beanstalk"
+name        = "${var.stack}-beanstalk"
+description = "${var.stack}-beanstalk"
 
 assume_role_policy = data.aws_iam_policy_document.beanstalk.json
 
-
+# tags = module.ssm_label.tags
 }
 
 resource "aws_iam_role_policy_attachment" "beanstalk" {
@@ -55,7 +53,7 @@ policy_arn = aws_iam_policy.beanstalk.arn
 ### BEGIN KMS
 
 resource "aws_kms_key" "kms-key" {
-description         = "${var.stack} ${var.environment} KMS Key"
+description         = "${var.stack} KMS Key"
 enable_key_rotation = "true"
 
 policy = <<POLICY
@@ -91,12 +89,12 @@ policy = <<POLICY
     ]
 }
 POLICY
-
+# tags = module.ssm_label.tags
 
 }
 
 resource "aws_kms_alias" "kms-alias" {
-name          = "alias/${var.stack}-${var.environment}-${var.application}-kms-key"
+name          = "alias/${var.stack}-kms-key"
 target_key_id = aws_kms_key.kms-key.key_id
 }
 
@@ -113,24 +111,22 @@ kms_key_id  = aws_kms_key.kms-key.arn
 account_id  = data.aws_caller_identity.current.account_id
 region      = var.region_primary
 stack       = var.stack
-environment = var.environment
-application = var.application
 }
 }
 
 resource "aws_iam_policy" "instance_profile" {
-name        = "${var.stack}-${var.environment}-${var.application}-instance-profile-policy"
-description = "${var.stack}-${var.environment}-${var.application}-instance-profile-policy"
+name        = "${var.stack}-instance-profile-policy"
+description = "${var.stack}-instance-profile-policy"
 policy      = data.template_file.instance-profile-policy.rendered
 }
 
 resource "aws_iam_instance_profile" "instance_profile" {
-name = "${var.stack}-${var.environment}-${var.application}-instance-profile"
+name = "${var.stack}-instance-profile"
 role = aws_iam_role.instance_profile.name
 }
 
 resource "aws_iam_role" "instance_profile" {
-name = "${var.stack}-${var.environment}-${var.application}-instance-profile"
+name = "${var.stack}-instance-profile"
 
 assume_role_policy = <<EOF
 {
@@ -147,7 +143,7 @@ assume_role_policy = <<EOF
   ]
 }
 EOF
-
+# tags = module.ssm_label.tags
 }
 
 resource "aws_iam_policy_attachment" "instance_policy_attach" {
@@ -155,7 +151,6 @@ name       = aws_iam_policy.instance_profile.name
 roles      = [aws_iam_role.instance_profile.name]
 policy_arn = aws_iam_policy.instance_profile.arn
 }
-
 
 
 # CodeBuild role and policy
@@ -168,20 +163,18 @@ kms_key_id  = aws_kms_key.kms-key.arn
 account_id  = data.aws_caller_identity.current.account_id
 region      = var.region_primary
 stack       = var.stack
-environment = var.environment
-application = var.application
 }
 }
 
 resource "aws_iam_policy" "codebuild" {
-name        = "${var.stack}-${var.environment}-${var.application}-codebuild-policy"
-description = "${var.stack}-${var.environment}-${var.application}-codebuild-policy"
+name        = "${var.stack}-codebuild-policy"
+description = "${var.stack}-codebuild-policy"
 policy      = data.template_file.codebuild-policy.rendered
 }
 
 resource "aws_iam_role" "codebuild" {
-name        = "${var.stack}-${var.environment}-${var.application}-codebuild"
-description = "${var.stack}-${var.environment}-${var.application}-codebuild"
+name        = "${var.stack}-codebuild"
+description = "${var.stack}-codebuild"
 
 assume_role_policy = <<EOF
 {
@@ -198,7 +191,7 @@ assume_role_policy = <<EOF
   ]
 }
 EOF
-
+# tags = module.ssm_label.tags
 }
 
 resource "aws_iam_policy_attachment" "codebuild" {
@@ -212,17 +205,18 @@ policy_arn = aws_iam_policy.codebuild.arn
 # code build sg
 module "security-group-codebuild" {
 source  = "terraform-aws-modules/security-group/aws"
-version = "4.4.0"
+version = "3.1.0"
 
-name         = "${var.stack}-${var.environment}-${var.application}-codebuild-sg"
-description  = "${var.stack}-${var.environment}-${var.application}-codebuild-sg"
-vpc_id       = aws_default_vpc.default_vpc.id
+name         = "${var.stack}-codebuild-sg"
+description  = "${var.stack}-codebuild-sg"
+vpc_id       = local.vpc_id
 egress_rules = ["all-all"]
-
+# tags = module.ssm_label.tags
 }
 
 resource "aws_s3_bucket" "codepipeline" {
-bucket = "${var.stack}${var.environment}-codepipeline"
+count  = length(var.environment)
+bucket = "${var.stack}-${var.environment[count.index]}-codepipeline"
 server_side_encryption_configuration {
 rule {
 apply_server_side_encryption_by_default {
@@ -249,8 +243,96 @@ days = 90
 }
 }
 
+}
+
+### BEGIN SNS notification
+
+data "aws_iam_policy_document" "notification" {
+statement {
+actions = ["sns:Publish"]
+
+principals {
+type        = "Service"
+identifiers = ["codestar-notifications.amazonaws.com"]
+}
+
+resources = [aws_sns_topic.topic.arn]
+}
+}
+
+resource "aws_sns_topic_policy" "notification" {
+arn    = aws_sns_topic.topic.arn
+policy = data.aws_iam_policy_document.notification.json
+}
+
+resource "aws_sns_topic" "topic" {
+name              = "${var.stack}-topic"
+display_name      = "${var.stack}-topic"
+kms_master_key_id = aws_kms_key.kms-key.arn
 
 }
+
+resource "aws_sns_topic_subscription" "user_updates_email_target" {
+  topic_arn = aws_sns_topic.topic.arn
+  protocol  = "email"
+  endpoint  = var.sns_email_id
+}
+
+resource "aws_codestarnotifications_notification_rule" "pipeline" {
+count  = length(var.environment)
+detail_type = "BASIC"
+event_type_ids = [
+"codepipeline-pipeline-action-execution-failed",
+"codepipeline-pipeline-action-execution-canceled",
+"codepipeline-pipeline-stage-execution-canceled",
+"codepipeline-pipeline-stage-execution-failed",
+"codepipeline-pipeline-pipeline-execution-failed",
+"codepipeline-pipeline-pipeline-execution-canceled",
+"codepipeline-pipeline-pipeline-execution-superseded",
+"codepipeline-pipeline-manual-approval-failed",
+"codepipeline-pipeline-manual-approval-needed"
+### added all for now we can uncomment if needed
+//    "codepipeline-pipeline-manual-approval-succeeded"
+//    "codepipeline-pipeline-action-execution-succeeded"
+//    "codepipeline-pipeline-action-execution-started",
+//    "codepipeline-pipeline-stage-execution-started",
+//    "codepipeline-pipeline-stage-execution-succeeded",
+//    "codepipeline-pipeline-stage-execution-resumed",
+//    "codepipeline-pipeline-pipeline-execution-started",
+//    "codepipeline-pipeline-pipeline-execution-resumed",
+//    "codepipeline-pipeline-pipeline-execution-succeeded",
+]
+
+name     = "${var.stack}-${var.environment[count.index]}-pipeline-notification"
+resource = aws_codepipeline.codepipeline[count.index].arn
+
+target {
+address = aws_sns_topic.topic.arn
+}
+}
+
+resource "aws_codestarnotifications_notification_rule" "build" {
+count  =  length(var.environment)
+detail_type = "BASIC"
+event_type_ids = [
+"codebuild-project-build-state-failed",
+"codebuild-project-build-phase-failure",
+"codebuild-project-build-state-stopped"
+//    "codebuild-project-build-state-succeeded",
+//    "codebuild-project-build-phase-success"
+]
+
+name     = "${var.stack}-${var.environment[count.index]}-build-notification"
+resource = aws_codebuild_project.build[count.index].arn
+
+target {
+address = aws_sns_topic.topic.arn
+}
+}
+
+### END SNS notification
+
+
 #  CodePipeline role and policy
 
 data "template_file" "codepipeline-policy" {
@@ -260,20 +342,18 @@ vars = {
 account_id  = data.aws_caller_identity.current.account_id
 region      = var.region_primary
 stack       = var.stack
-environment = var.environment
-application = var.application
 }
 }
 
 resource "aws_iam_policy" "codepipeline" {
-name        = "${var.stack}-${var.environment}-${var.application}-codepipeline-policy"
-description = "${var.stack}-${var.environment}-${var.application}-codepipeline-policy"
+name        = "${var.stack}-codepipeline-policy"
+description = "${var.stack}-codepipeline-policy"
 policy      = data.template_file.codepipeline-policy.rendered
 }
 
 resource "aws_iam_role" "codepipeline" {
-name        = "${var.stack}-${var.environment}-${var.application}-codepipeline"
-description = "${var.stack}-${var.environment}-${var.application}-codepipeline"
+name        = "${var.stack}-codepipeline"
+description = "${var.stack}-codepipeline"
 
 
 assume_role_policy = <<EOF
@@ -291,7 +371,7 @@ assume_role_policy = <<EOF
   ]
 }
 EOF
-
+# tags = module.ssm_label.tags
 }
 
 resource "aws_iam_policy_attachment" "codepipeline" {
@@ -300,71 +380,51 @@ roles      = [aws_iam_role.codepipeline.name]
 policy_arn = aws_iam_policy.codepipeline.arn
 }
 
-## Security groups
 
-module "security-group-webserver" {
-source      = "terraform-aws-modules/security-group/aws"
-version     = "4.4.0"
-name        = "${var.stack}-${var.environment}-${var.application}-webserver-sg"
-description = "${var.stack}-${var.environment}-${var.application}-webserver-sg"
-vpc_id      = aws_default_vpc.default_vpc.id
-ingress_with_source_security_group_id = [
-{
-rule                     = "all-all"
-description              = "local-access"
-source_security_group_id = "${module.security-group-webserver.security_group_id}"
-},
-{
-rule                     = "http-80-tcp"
-description              = "http-from-elb"
-source_security_group_id = "${module.security-group-elb.security_group_id}"
-},
-{
-rule                     = "https-443-tcp"
-description              = "https-from-elb"
-source_security_group_id = "${module.security-group-elb.security_group_id}"
-}
-]
-egress_rules = ["all-all"]
-
-}
-module "security-group-elb" {
-source      = "terraform-aws-modules/security-group/aws"
-version     = "4.4.0"
-name        = "${var.stack}-${var.environment}-${var.application}-elb-sg"
-description = "${var.stack}-${var.environment}-${var.application}-elb-sg"
-vpc_id      = aws_default_vpc.default_vpc.id
-
-ingress_cidr_blocks = var.whitelist
-ingress_rules       = ["https-443-tcp", "http-80-tcp"]
-egress_rules        = ["all-all"]
-ingress_with_source_security_group_id = [
-{
-rule                     = "all-all"
-description              = "local-access"
-source_security_group_id = "${module.security-group-elb.security_group_id}"
-}
-]
-
+resource "aws_security_group" "web_server_sg" {
+  name = "${var.stack}-webserver-sg"
+  vpc_id = local.vpc_id
+    ingress {
+        from_port    = 443
+        to_port      = 443
+        protocol     = "tcp"
+        security_groups = [aws_security_group.allow_tls.id]
+    }
+    ingress {
+        from_port    = 80
+        to_port      = 80
+        protocol     = "tcp"
+        security_groups = [aws_security_group.allow_tls.id]
+    }
+    egress {
+        from_port    = 0
+        to_port      = 0
+        protocol     = "-1"
+        cidr_blocks  = ["0.0.0.0/0"]
+    }
 }
 
-### HTTP  rediect to HTTPS
-resource "aws_lb_listener" "https_redirect" {
-load_balancer_arn = aws_elastic_beanstalk_environment.environment.load_balancers[0]
-port              = 80
-protocol          = "HTTP"
 
-default_action {
-type = "redirect"
+resource "aws_security_group" "allow_tls" {
+  name = "${var.stack}-ELB-sg"
+  vpc_id = local.vpc_id
+    ingress {
+        from_port    = 443
+        to_port      = 443
+        protocol     = "tcp"
+        cidr_blocks  = ["0.0.0.0/0"]
+    }
+    ingress {
+        from_port    = 80
+        to_port      = 80
+        protocol     = "tcp"
+        cidr_blocks  = ["0.0.0.0/0"]  
+    }
+    egress {
+        from_port    = 0
+        to_port      = 0
+        protocol     = "-1"
+        cidr_blocks  = ["0.0.0.0/0"]
+    }
+}
 
-redirect {
-port        = "443"
-protocol    = "HTTPS"
-status_code = "HTTP_301"
-}
-}
-}
-
-data "aws_lb" "eb_lb" {
-arn = aws_elastic_beanstalk_environment.environment.load_balancers[0]
-}

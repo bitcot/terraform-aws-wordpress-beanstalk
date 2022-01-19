@@ -1,8 +1,9 @@
 # Create CodeBuild resource
 
 resource "aws_codebuild_project" "build" {
-  name          = "${var.stack}-${var.environment}-${var.application}-codebuild"
-  description   = "${var.stack}-${var.environment}-${var.application}-codebuild"
+  count         = length(var.environment)
+  name          = "${var.stack}-${var.environment[count.index]}-codebuild"
+  description   = "${var.stack}-${var.environment[count.index]}-codebuild"
   build_timeout = var.build_timeout
   service_role  = aws_iam_role.codebuild.arn
 
@@ -25,17 +26,27 @@ resource "aws_codebuild_project" "build" {
       name  = "stack"
       value = var.stack
     }
+
     environment_variable {
       name  = "environment"
-      value = var.environment
+      value = var.environment[count.index]
     }
+    environment_variable {
+      name = "dbname"
+      value = "${var.stack}-db"
+    }
+    environment_variable {
+      name  = "filesystemid"
+      value = aws_efs_file_system.efs.id
+    }
+
   }
 
   logs_config {
-    # cloudwatch_logs {
-    #   group_name  = "/${var.stack}/${var.environment}/codebuild"
-    #   stream_name = "codebuild"
-    # }
+    cloudwatch_logs {
+      group_name  = "/${var.stack}/${var.environment[count.index]}-codebuild"
+      stream_name = "codebuild"
+    }
 
     s3_logs {
       status = "DISABLED"
@@ -47,8 +58,9 @@ resource "aws_codebuild_project" "build" {
   }
 
   vpc_config {
-    vpc_id             = aws_default_vpc.default_vpc.id
-    subnets            = local.subnets
-    security_group_ids = [module.security-group-codebuild.security_group_id]
+    vpc_id             = local.vpc_id
+    subnets            = local.pri_subnet_ids
+    security_group_ids = [module.security-group-codebuild.this_security_group_id]
   }
+
 }

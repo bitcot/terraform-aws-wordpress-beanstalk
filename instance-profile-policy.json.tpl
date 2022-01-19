@@ -18,10 +18,23 @@
                 "s3:GetEncryptionConfiguration"
             ],
             "Resource": [
-                "arn:aws:s3:::${stack}${environment}*",
-                "arn:aws:s3:::${stack}${environment}*/*"
+                "arn:aws:s3:::${stack}*",
+                "arn:aws:s3:::${stack}/*",
+                "arn:aws:s3:::${stack}*",
+                "arn:aws:s3:::${stack}*/*"
             ]
         },
+        {
+            "Sid": "ElasticBeanstalkHealthAccess",
+            "Action": [
+              "elasticbeanstalk:PutInstanceStatistics"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+              "arn:aws:elasticbeanstalk:*:*:application/*",
+              "arn:aws:elasticbeanstalk:*:*:environment/*"
+            ]
+          },
         {
             "Sid": "s3rdslist",
             "Effect": "Allow",
@@ -56,7 +69,7 @@
               "ssm:GetParameters",
               "ssm:*"
              ],
-            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/${environment}/${application}*"
+            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}*"
         },
         {
             "Sid": "ssmrwparameter",
@@ -64,7 +77,7 @@
             "Action": [
               "ssm:PutParameter"
              ],
-            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/${environment}/${application}/dbready"
+            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/dbready"
         },
         {
             "Sid": "rdsaccess",
@@ -73,8 +86,7 @@
             "Resource": "*",
             "Condition": {
               "StringEquals": {
-                "rds:db-tag/stack": "${stack}",
-                "rds:db-tag/environment": "${environment}"
+                "rds:db-tag/stack": "${stack}"
               }
             }
         },
@@ -111,7 +123,7 @@
             "Action": [
                 "secretsmanager:GetSecretValue"
             ],
-            "Resource": "*"
+            "Resource": "arn:aws:secretsmanager:${region}:${account_id}:secret:${stack}-*"
         },
         {
             "Effect": "Allow",
@@ -119,7 +131,7 @@
                 "secretsmanager:CreateSecret",
                 "secretsmanager:PutSecretValue"
             ],
-            "Resource": "arn:aws:secretsmanager:${region}:${account_id}:secret:${stack}-${environment}-${application}-hash_salt*"
+            "Resource": "arn:aws:secretsmanager:${region}:${account_id}:secret:${stack}-hash_salt*"
         },
         {
             "Effect": "Allow",
@@ -161,15 +173,6 @@
             "Resource": [
                 "*"
             ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:*",
-                "s3-object-lambda:*"
-            ],
-            "Resource": "*"
         }
-
     ]
 }

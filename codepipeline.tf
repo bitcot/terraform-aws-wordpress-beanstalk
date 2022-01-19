@@ -1,9 +1,10 @@
 resource "aws_codepipeline" "codepipeline" {
-  name     = "${var.stack}-${var.environment}-${var.application}"
+  count    = length(var.environment)
+  name     = "${var.stack}-${var.environment[count.index]}"
   role_arn = aws_iam_role.codepipeline.arn
 
   artifact_store {
-    location = aws_s3_bucket.codepipeline.bucket
+    location = aws_s3_bucket.codepipeline[count.index].bucket
     type     = "S3"
 
     encryption_key {
@@ -12,7 +13,7 @@ resource "aws_codepipeline" "codepipeline" {
     }
   }
 
-  stage {
+   stage {
     name = "Source"
 
     action {
@@ -23,12 +24,14 @@ resource "aws_codepipeline" "codepipeline" {
       version          = "1"
       output_artifacts = ["SourceArtifact"]
       configuration = {
-        S3Bucket = "${var.stack}-${var.environment}-${var.application}-code"
-        S3ObjectKey = "${var.codeprefix}"  # username/reponame/branchname/username_reponame.zip
+        S3Bucket = "${var.stack}-${var.environment[count.index]}-code"
+        S3ObjectKey = lookup(var.S3ObjectKey, var.environment[count.index])  # username/reponame/branchname/username_reponame.zip
         PollForSourceChanges = "${var.poll-source-changes}"
       }
+    #    run_order = 1
     }
-  }
+
+    }
 
   stage {
     name = "Build"
@@ -43,7 +46,7 @@ resource "aws_codepipeline" "codepipeline" {
       output_artifacts = ["BuildArtifact"]
 
       configuration = {
-        ProjectName = aws_codebuild_project.build.name
+        ProjectName = aws_codebuild_project.build[count.index].name
       }
     }
   }
@@ -60,11 +63,12 @@ resource "aws_codepipeline" "codepipeline" {
       version         = "1"
 
       configuration = {
-        ApplicationName = aws_elastic_beanstalk_application.app.name
+        ApplicationName = aws_elastic_beanstalk_application.app[count.index].name
         # !!! EnvironmentName to be configured correctly, according to Beanstalk configuration !!!
-        EnvironmentName = aws_elastic_beanstalk_environment.environment.name
+        EnvironmentName = aws_elastic_beanstalk_environment.environment[count.index].name
       }
     }
   }
+
 
 }

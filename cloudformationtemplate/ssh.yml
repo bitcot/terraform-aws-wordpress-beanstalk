@@ -152,8 +152,8 @@ Resources:
         Rules:
           - Id: Delete after 45 days
             Status: Enabled
-            ExpirationInDays: 30
-            NoncurrentVersionExpirationInDays: 45 
+            ExpirationInDays: 45
+            NoncurrentVersionExpirationInDays: 45
       Tags: []
 
   CopyZips:

@@ -1,34 +1,92 @@
 
-data "aws_caller_identity" "current" {
+resource "aws_alb" "application_load_balancer" {
+    name               = "${var.stack}-alb"
+    internal           = false
+    load_balancer_type = "application"
+    subnets = local.pub_subnet_ids
+    idle_timeout    = 180
+    drop_invalid_header_fields = true
+    security_groups = [aws_security_group.allow_tls.id]
 }
 
 
-locals {
-  subnets = [aws_default_subnet.default_subnet_a.id,aws_default_subnet.default_subnet_b.id,aws_default_subnet.default_subnet_c.id]
+resource "aws_lb_target_group" "target_group" {
+    name        = "${var.stack}-tg"
+    port        = 80
+    protocol    = "HTTP"
+    target_type = "instance"
+    vpc_id      = "${local.vpc_id}"
+    health_check {
+      matcher = "200-499"
+      path    = "/"
+      interval = "60"
+      timeout  = "50"
+
+    }
 }
 
+resource "aws_lb_listener" "httpsssl" {
+  load_balancer_arn = "${aws_alb.application_load_balancer.arn}"
+  port              = "80"
+  protocol          = "HTTP"
 
-# data "aws_elastic_beanstalk_solution_stack" "php" {
-#   most_recent = true
-#   name_regex = "^64bit Amazon Linux 2 (.*) running PHP 7.4(.*)$"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "this" {
+  count             = length(var.environment)
+  load_balancer_arn = "${aws_alb.application_load_balancer.arn}"
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = var.sslpolicy
+  certificate_arn   = var.elb_certificate_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.target_group.arn
+  }
+}
+
+# resource "aws_lb_listener_certificate" "listener_certs" {
+#   count           = length(var.environment)
+#   listener_arn    = aws_lb_listener.this.arn
+#   certificate_arn = var.elb_certificate_arn[count.index]
 # }
 
 
+data "aws_elastic_beanstalk_solution_stack" "php" {
+  most_recent = true
+  name_regex = "^64bit Amazon Linux 2 (.*) running PHP 7.4(.*)$"
+}
+
+
 resource "aws_elastic_beanstalk_application" "app" {
-  name        = "${var.stack}-${var.environment}-${var.application}"
-  description = "${var.stack}-${var.environment}-${var.application}-application"
+  count               = length(var.environment)
+  name                = "${var.stack}-${var.environment[count.index]}"
+  appversion_lifecycle {
+    service_role          = aws_iam_role.beanstalk.arn
+    max_age_in_days       = 60
+    delete_source_from_s3 = true
+  }
 
   tags = {
     "stack"     = var.stack
-    "stack_env" = var.environment
+    "stack_env" = var.environment[count.index]
   }
 }
 
 resource "aws_elastic_beanstalk_environment" "environment" {
-  name                = "${var.stack}-${var.environment}-${var.application}-env"
-  application         = aws_elastic_beanstalk_application.app.name
-  #solution_stack_name  = data.aws_elastic_beanstalk_solution_stack.php.name
-  solution_stack_name  = "PHP 7.4 running on 64bit Amazon Linux 2/3.3.8"
+  count               = length(var.environment)
+  name                = "${var.stack}-${var.environment[count.index]}"
+  application         = aws_elastic_beanstalk_application.app[count.index].name
+  solution_stack_name = data.aws_elastic_beanstalk_solution_stack.php.name
+
   setting {
     namespace = "aws:elasticbeanstalk:environment"
     name      = "ServiceRole"
@@ -38,50 +96,50 @@ resource "aws_elastic_beanstalk_environment" "environment" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "VPCId"
-    value = aws_default_vpc.default_vpc.id
+    value = local.vpc_id
   }
 
   # You need to define which subnets, unfortunately
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value = join(",", local.subnets)
+    value = join(",", local.pri_subnet_ids)
 }
 
-setting {
-  namespace = "aws:ec2:vpc"
-  name      = "ELBSubnets"
-  value     = join(",", local.subnets)
-}
-setting {
-namespace = "aws:elbv2:listener:default"
-name      = "ListenerEnabled"
-value     = "false"
-}
+# setting {
+#   namespace = "aws:ec2:vpc"
+#   name      = "ELBSubnets"
+#   value     = join(",", local.pub_subnet_ids)
+# }
+# setting {
+# namespace = "aws:elbv2:listener:default"
+# name      = "ListenerEnabled"
+# value     = "false"
+# }
 
-setting {
-namespace = "aws:elbv2:listener:443"
-name      = "ListenerEnabled"
-value     = "true"
-}
+# setting {
+# namespace = "aws:elbv2:listener:443"
+# name      = "ListenerEnabled"
+# value     = "true"
+# }
 
-setting {
-namespace = "aws:elbv2:listener:443"
-name      = "Protocol"
-value     = "HTTPS"
-}
+# setting {
+# namespace = "aws:elbv2:listener:443"
+# name      = "Protocol"
+# value     = "HTTPS"
+# }
 
-setting {
-namespace = "aws:elbv2:listener:443"
-name      = "SSLCertificateArns"
-value     = var.ELB_certificate_arn
-}
+# setting {
+# namespace = "aws:elbv2:listener:443"
+# name      = "SSLCertificateArns"
+# value     = aws_acm_certificate_validation.cert.certificate_arn
+# }
 
-setting {
-namespace = "aws:elbv2:listener:443"
-name      = "SSLPolicy"
-value     = var.sslpolicy
-}
+# setting {
+# namespace = "aws:elbv2:listener:443"
+# name      = "SSLPolicy"
+# value     = var.sslpolicy
+# }
 
 setting {
 namespace = "aws:elb:policies"
@@ -128,6 +186,20 @@ value = jsonencode({
           "LoadAverage1min" : 60
         }
       },
+      "Rules": {
+        "Environment": {
+          "ELB": {
+            "ELBRequests4xx": {
+              "Enabled": false
+            }
+          },
+          "Application": {
+            "ApplicationRequests4xx": {
+              "Enabled": false
+            }
+          }
+        }
+      },
       "Version" : 1
     })
     resource = ""
@@ -162,10 +234,69 @@ resource  = ""
 
 setting {
 namespace = "aws:elasticbeanstalk:environment"
+name      = "EnvironmentType"
+value     = "LoadBalanced"
+}
+
+setting {
+namespace = "aws:elasticbeanstalk:environment"
 name      = "LoadBalancerType"
 value     = "application"
 }
 
+setting {
+namespace = "aws:elasticbeanstalk:environment"
+name      = "LoadBalancerIsShared"
+value     = true
+}
+
+setting {
+namespace = "aws:elbv2:loadbalancer"
+name      = "SharedLoadBalancer"
+value     = "${aws_alb.application_load_balancer.arn}"
+}
+
+setting {
+namespace = "aws:elbv2:listener:443"
+name      = "Rules"
+value     = "httpslistener"
+}
+
+
+setting {
+  namespace = "aws:elbv2:listenerrule:httpslistener"
+  name      = "Priority"
+  value     = "1"
+}
+
+
+setting {
+  namespace = "aws:elbv2:listenerrule:httpslistener"
+  name      = "Process"
+  value     = "default"
+}
+
+setting {
+namespace = "aws:elbv2:listenerrule:httpslistener"
+name      = "HostHeaders"
+value     =  var.elb_domains[count.index]
+}
+
+setting {
+namespace = "aws:elasticbeanstalk:environment:process:default"
+name      = "Port"
+value     = "80"
+}
+setting {
+namespace = "aws:elasticbeanstalk:environment:process:default"
+name      = "MatcherHTTPCode"
+value     = "200-499"
+}
+setting {
+namespace = "aws:elasticbeanstalk:environment:process:default"
+name      = "Protocol"
+value     = "HTTP"
+}
 
 setting {
 namespace = "aws:elasticbeanstalk:environment:process:default"
@@ -200,7 +331,7 @@ value     = var.stack
 setting {
 namespace = "aws:elasticbeanstalk:application:environment"
 name      = "environment"
-value     = var.environment
+value     = var.environment[count.index]
 }
 setting {
 namespace = "aws:autoscaling:launchconfiguration"
@@ -214,6 +345,21 @@ namespace = "aws:autoscaling:launchconfiguration"
 name      = "InstanceType"
 value     = var.autoscaling_instance_type
 }
+
+#####
+setting {
+  namespace = "aws:autoscaling:launchconfiguration"
+  name      = "RootVolumeSize"
+  value     = var.root_volume_size
+  resource  = ""
+}
+setting {
+  namespace = "aws:autoscaling:launchconfiguration"
+  name      = "RootVolumeType"
+  value     = var.root_volume_type
+  resource  = ""
+}
+#####
 
 setting {
 namespace = "aws:autoscaling:asg"
@@ -240,15 +386,15 @@ value     = var.healthcheck_success_threshold
 }
 #securitygroups
 
-setting {
-namespace = "aws:elbv2:loadbalancer"
-name      = "SecurityGroups"
-value     = module.security-group-elb.security_group_id
-}
+# setting {
+# namespace = "aws:elbv2:loadbalancer"
+# name      = "SecurityGroups"
+# value     = module.security-group-elb.this_security_group_id
+# }
 setting {
 namespace = "aws:autoscaling:launchconfiguration"
 name      = "SecurityGroups"
-value     = module.security-group-webserver.security_group_id
+value     = aws_security_group.web_server_sg.id
 }
 
 # Configure rolling deployments - begin
@@ -397,9 +543,30 @@ value     = "apache"
 //    ]
 //  }
 
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "document_root"
+value     = var.document_root
+}
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "memory_limit"
+value     = var.memory_limit
+}
+setting {
+namespace = "aws:elasticbeanstalk:container:php:phpini"
+name      = "max_execution_time"
+value     = var.max_execution_time
+}
+# setting {
+# namespace = "aws:elasticbeanstalk:container:php:phpini"
+# name      = "display_errors"
+# value     = "on"
+# }
+
 tags = {
 "stack"     = var.stack
-"stack_env" = var.environment
-"application" = var.application
+"stack_env" = var.environment[count.index]
 }
+# depends_on = [aws_acm_certificate.cert,aws_acm_certificate_validation.cert]
 }

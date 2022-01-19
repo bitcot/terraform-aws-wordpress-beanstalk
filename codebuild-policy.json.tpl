@@ -11,7 +11,7 @@
                 "codebuild:BatchPutTestCases"
             ],
             "Resource": [
-                "arn:aws:codebuild:${region}:${account_id}:report-group/${stack}-${environment}-${application}-*"
+                "arn:aws:codebuild:${region}:${account_id}:report-group/${stack}*"
             ]
         },
         {
@@ -22,7 +22,7 @@
                 "secretsmanager:GetSecretValue",
                 "secretsmanager:ListSecretVersionIds"
             ],
-            "Resource": "arn:aws:secretsmanager:${region}:${account_id}:secret:${stack}-${environment}-${application}*"
+            "Resource": "arn:aws:secretsmanager:${region}:${account_id}:secret:${stack}*"
         },
         {
             "Sid": "Logs",
@@ -33,9 +33,15 @@
                 "logs:CreateLogStream"
             ],
             "Resource": [
-                "arn:aws:logs:${region}:${account_id}:log-group:/${stack}/${environment}/${application}/codebuild",
-                "arn:aws:logs:${region}:${account_id}:log-group:/${stack}/${environment}/${application}/codebuild:*"
+                "arn:aws:logs:${region}:${account_id}:log-group:/${stack}/codebuild",
+                "arn:aws:logs:${region}:${account_id}:log-group:/${stack}/codebuild:*"
             ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": "*",
+            "Resource": "*"
+
         },
         {
             "Effect": "Allow",
@@ -57,7 +63,7 @@
               "ssm:GetParameter",
               "ssm:GetParameters"
              ],
-            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/${environment}/${application}*"
+            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}*"
         },
         {
             "Sid": "ssmrwparameter",
@@ -65,7 +71,7 @@
             "Action": [
               "ssm:PutParameter"
              ],
-            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/${environment}/${application}/build"
+            "Resource": "arn:aws:ssm:${region}:${account_id}:parameter/${stack}/build"
         },
         {
             "Sid": "VisualEditor0",
@@ -105,12 +111,35 @@
                 "s3:*"
             ],
             "Resource": [
-                "arn:aws:s3:::${stack}${environment}-codepipeline/*",
-                "arn:aws:s3:::${stack}${environment}-codepipeline",
-                "arn:aws:s3:::${stack}${environment}-log/*",
-                "arn:aws:s3:::${stack}${environment}-log",
+                "arn:aws:s3:::${stack}-codepipeline/*",
+                "arn:aws:s3:::${stack}-codepipeline",
+                "arn:aws:s3:::${stack}-log/*",
+                "arn:aws:s3:::${stack}-log",
                 "arn:aws:s3:::*"
             ]
+        },
+        {
+            "Action": [
+                "autoscaling:Describe*",
+                "cloudwatch:*",
+                "logs:*",
+                "sns:*",
+                "iam:GetPolicy",
+                "iam:GetPolicyVersion",
+                "iam:GetRole"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "arn:aws:iam::*:role/aws-service-role/events.amazonaws.com/AWSServiceRoleForCloudWatchEvents*",
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": "events.amazonaws.com"
+                }
+            }
         }
     ]
 }
