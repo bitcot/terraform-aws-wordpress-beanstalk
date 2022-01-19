@@ -1,4 +1,4 @@
-## WORDPRESS BEANSTALK MODULE
+# WORDPRESS BEANSTALK MODULE
 
 # This repository contains the terraform script for beanstalk environment with PHP application with multiple environments creation.
 
@@ -43,11 +43,13 @@
     
 3. Insert the required variables values as shown above into this script.
 4. Then initialize and apply the terraform as,
+
          * terraform init
          * terraform plan 
          * terraform apply 
 
 5. To destroy the created infrastructure,
+
          * terraform destroy
          
 # To get the outputs, 
