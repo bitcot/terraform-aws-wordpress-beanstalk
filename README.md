@@ -31,6 +31,7 @@
             "stg" = "username/reponame/branchname/username_reponame.zip"
         }
         elb_domains                  = "<ELB domain names for multi environments EX: ["dev.domain.com","stg.domain.com"]>"
+        healthcheckpath              = "<health check path for the load balancer target group. Default is "/" Change it if needed.>"
         dbadminuser                  = "<Username for the database>"
         db_instance_class            = <Instance type for RDS EX: db.t2.small>
         engine_version               = "<Version of database engine to use EX: 5.5.6, 8.0>"

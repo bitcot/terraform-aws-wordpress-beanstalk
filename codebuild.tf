@@ -57,10 +57,10 @@ resource "aws_codebuild_project" "build" {
     type = "CODEPIPELINE"
   }
 
-  vpc_config {
-    vpc_id             = local.vpc_id
-    subnets            = local.pri_subnet_ids
-    security_group_ids = [module.security-group-codebuild.this_security_group_id]
-  }
+  # vpc_config {
+  #   vpc_id             = local.vpc_id
+  #   subnets            = local.pri_subnet_ids
+  #   security_group_ids = [module.security-group-codebuild.this_security_group_id]
+  # }
 
 }
